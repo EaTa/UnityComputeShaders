@@ -1,5 +1,5 @@
 ﻿// Each #kernel tells which function to compile; you can have many kernels
-#define THREADGROUPSIZE 128 
+#define THREADGROUPSIZE 128
 #pragma kernel BendGrass
 
 #include "noiseSimplex.cginc"
@@ -11,13 +11,14 @@ struct GrassBlade
     float noise;
     float fade;
 };
+
 RWStructuredBuffer<GrassBlade> bladesBuffer;
 float time;
 float maxBend;
 float4 wind;
 
 [numthreads(THREADGROUPSIZE,1,1)]
-void BendGrass (uint3 id : SV_DispatchThreadID)
+void BendGrass(uint3 id : SV_DispatchThreadID)
 {
     GrassBlade blade = bladesBuffer[id.x];
 
@@ -27,6 +28,6 @@ void BendGrass (uint3 id : SV_DispatchThreadID)
     //wind.w  - noise scale factor
     float noise = 0;
     blade.bend = noise * maxBend * blade.noise;
-    
+
     bladesBuffer[id.x] = blade;
 }

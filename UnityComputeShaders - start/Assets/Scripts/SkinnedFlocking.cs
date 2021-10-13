@@ -1,36 +1,10 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
-public class SkinnedFlocking : MonoBehaviour {
-    public struct Boid
-    {
-        public Vector3 position;
-        public Vector3 direction;
-        public float noise_offset;
-        public float frame;
-        
-        public Boid(Vector3 pos, Vector3 dir, float offset)
-        {
-            position.x = pos.x;
-            position.y = pos.y;
-            position.z = pos.z;
-            direction.x = dir.x;
-            direction.y = dir.y;
-            direction.z = dir.z;
-            noise_offset = offset;
-            frame = 0;
-        }
-    }
-
+public class SkinnedFlocking : MonoBehaviour
+{
     public ComputeShader shader;
-
-    private SkinnedMeshRenderer boidSMR;
     public GameObject boidObject;
-    private Animator animator;
     public AnimationClip animationClip;
-
-    private int numOfFrames;
     public int boidsCount;
     public float spawnRadius;
     public Transform target;
@@ -40,20 +14,25 @@ public class SkinnedFlocking : MonoBehaviour {
     public float boidSpeedVariation = 1f;
     public float boidFrameSpeed = 10f;
     public bool frameInterpolation = true;
+    public Material boidMaterial;
+    Animator animator;
+    readonly uint[] args = new uint[5] { 0, 0, 0, 0, 0 };
+    ComputeBuffer argsBuffer;
 
     Mesh boidMesh;
-    
-    private int kernelHandle;
-    private ComputeBuffer boidsBuffer;
-    private ComputeBuffer vertexAnimationBuffer;
-    public Material boidMaterial;
-    ComputeBuffer argsBuffer;
-    MaterialPropertyBlock props;
-    uint[] args = new uint[5] { 0, 0, 0, 0, 0 };
     Boid[] boidsArray;
-    int groupSizeX;
-    int numOfBoids;
+    ComputeBuffer boidsBuffer;
+
+    SkinnedMeshRenderer boidSMR;
     Bounds bounds;
+    int groupSizeX;
+
+    int kernelHandle;
+    int numOfBoids;
+
+    int numOfFrames;
+    MaterialPropertyBlock props;
+    ComputeBuffer vertexAnimationBuffer;
 
     void Start()
     {
@@ -61,7 +40,7 @@ public class SkinnedFlocking : MonoBehaviour {
 
         uint x;
         shader.GetKernelThreadGroupSizes(kernelHandle, out x, out _, out _);
-        groupSizeX = Mathf.CeilToInt((float)boidsCount / (float)x);
+        groupSizeX = Mathf.CeilToInt(boidsCount / (float)x);
         numOfBoids = groupSizeX * (int)x;
 
         bounds = new Bounds(Vector3.zero, Vector3.one * 1000);
@@ -75,18 +54,34 @@ public class SkinnedFlocking : MonoBehaviour {
         InitShader();
     }
 
+    void Update()
+    {
+        shader.SetFloat("time", Time.time);
+        shader.SetFloat("deltaTime", Time.deltaTime);
+
+        shader.Dispatch(kernelHandle, groupSizeX, 1, 1);
+
+        Graphics.DrawMeshInstancedIndirect(boidMesh, 0, boidMaterial, bounds, argsBuffer, 0, props);
+    }
+
+    void OnDestroy()
+    {
+        if (boidsBuffer != null) boidsBuffer.Release();
+        if (argsBuffer != null) argsBuffer.Release();
+        if (vertexAnimationBuffer != null) vertexAnimationBuffer.Release();
+    }
+
     void InitBoids()
     {
         boidsArray = new Boid[numOfBoids];
 
-        for (int i = 0; i < numOfBoids; i++)
+        for (var i = 0; i < numOfBoids; i++)
         {
-            Vector3 pos = transform.position + Random.insideUnitSphere * spawnRadius;
-            Quaternion rot = Quaternion.Slerp(transform.rotation, Random.rotation, 0.3f);
-            float offset = Random.value * 1000.0f;
+            var pos = transform.position + Random.insideUnitSphere * spawnRadius;
+            var rot = Quaternion.Slerp(transform.rotation, Random.rotation, 0.3f);
+            var offset = Random.value * 1000.0f;
             boidsArray[i] = new Boid(pos, rot.eulerAngles, offset);
         }
-        
     }
 
     void InitShader()
@@ -96,7 +91,7 @@ public class SkinnedFlocking : MonoBehaviour {
             1, 5 * sizeof(uint), ComputeBufferType.IndirectArguments
         );
 
-        if (boidMesh)//Set by the GenerateSkinnedAnimationForGPUBuffer
+        if (boidMesh) //Set by the GenerateSkinnedAnimationForGPUBuffer
         {
             args[0] = boidMesh.GetIndexCount(0);
             args[1] = (uint)numOfBoids;
@@ -125,29 +120,32 @@ public class SkinnedFlocking : MonoBehaviour {
             boidMaterial.DisableKeyword("FRAME_INTERPOLATION");
     }
 
-    void Update()
-    {
-        shader.SetFloat("time", Time.time);
-        shader.SetFloat("deltaTime", Time.deltaTime);
-
-        shader.Dispatch(kernelHandle, groupSizeX, 1, 1);
-
-        Graphics.DrawMeshInstancedIndirect( boidMesh, 0, boidMaterial, bounds, argsBuffer, 0, props);
-    }
-
-    void OnDestroy()
-    {
-        if (boidsBuffer != null) boidsBuffer.Release();
-        if (argsBuffer != null) argsBuffer.Release();
-        if (vertexAnimationBuffer != null) vertexAnimationBuffer.Release();
-    }
-
-    private void GenerateVertexAnimationBuffer()
+    void GenerateVertexAnimationBuffer()
     {
         boidSMR = boidObject.GetComponentInChildren<SkinnedMeshRenderer>();
 
         boidMesh = boidSMR.sharedMesh;
 
         boidObject.SetActive(false);
+    }
+
+    public struct Boid
+    {
+        public Vector3 position;
+        public Vector3 direction;
+        public float noise_offset;
+        public float frame;
+
+        public Boid(Vector3 pos, Vector3 dir, float offset)
+        {
+            position.x = pos.x;
+            position.y = pos.y;
+            position.z = pos.z;
+            direction.x = dir.x;
+            direction.y = dir.y;
+            direction.z = dir.z;
+            noise_offset = offset;
+            frame = 0;
+        }
     }
 }

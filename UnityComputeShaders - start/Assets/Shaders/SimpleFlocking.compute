@@ -3,8 +3,8 @@
 
 struct Boid
 {
-	float3 position;
-	float3 direction;
+    float3 position;
+    float3 direction;
 };
 
 RWStructuredBuffer<Boid> boidsBuffer;
@@ -19,9 +19,6 @@ float neighbourDistance;
 int boidsCount;
 
 [numthreads(GROUP_SIZE,1,1)]
-void CSMain (uint3 id : SV_DispatchThreadID)
+void CSMain(uint3 id : SV_DispatchThreadID)
 {
-	
 }
-
-

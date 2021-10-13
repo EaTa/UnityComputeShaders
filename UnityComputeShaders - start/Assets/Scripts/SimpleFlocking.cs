@@ -1,25 +1,7 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class SimpleFlocking : MonoBehaviour
 {
-    public struct Boid
-    {
-        public Vector3 position;
-        public Vector3 direction;
-        
-        public Boid(Vector3 pos)
-        {
-            position.x = pos.x;
-            position.y = pos.y;
-            position.z = pos.z;
-            direction.x = 0;
-            direction.y = 0;
-            direction.z = 0;
-        }
-    }
-
     public ComputeShader shader;
 
     public float rotationSpeed = 1f;
@@ -30,12 +12,12 @@ public class SimpleFlocking : MonoBehaviour
     public int boidsCount;
     public float spawnRadius;
     public Transform target;
+    GameObject[] boids;
+    Boid[] boidsArray;
+    ComputeBuffer boidsBuffer;
+    int groupSizeX;
 
     int kernelHandle;
-    ComputeBuffer boidsBuffer;
-    Boid[] boidsArray;
-    GameObject[] boids;
-    int groupSizeX;
     int numOfBoids;
 
     void Start()
@@ -44,23 +26,46 @@ public class SimpleFlocking : MonoBehaviour
 
         uint x;
         shader.GetKernelThreadGroupSizes(kernelHandle, out x, out _, out _);
-        groupSizeX = Mathf.CeilToInt((float)boidsCount / (float)x);
+        groupSizeX = Mathf.CeilToInt(boidsCount / (float)x);
         numOfBoids = groupSizeX * (int)x;
 
         InitBoids();
         InitShader();
     }
 
-    private void InitBoids()
+    void Update()
+    {
+        shader.SetFloat("time", Time.time);
+        shader.SetFloat("deltaTime", Time.deltaTime);
+
+        shader.Dispatch(kernelHandle, groupSizeX, 1, 1);
+
+        boidsBuffer.GetData(boidsArray);
+
+        for (var i = 0; i < boidsArray.Length; i++)
+        {
+            boids[i].transform.localPosition = boidsArray[i].position;
+
+            if (!boidsArray[i].direction.Equals(Vector3.zero))
+                boids[i].transform.rotation = Quaternion.LookRotation(boidsArray[i].direction);
+        }
+    }
+
+    void OnDestroy()
+    {
+        if (boidsBuffer != null) boidsBuffer.Dispose();
+    }
+
+    void InitBoids()
     {
         boids = new GameObject[numOfBoids];
         boidsArray = new Boid[numOfBoids];
 
-        for (int i = 0; i < numOfBoids; i++)
+        for (var i = 0; i < numOfBoids; i++)
         {
-            Vector3 pos = transform.position + Random.insideUnitSphere * spawnRadius;
+            var pos = transform.position + Random.insideUnitSphere * spawnRadius;
             boidsArray[i] = new Boid(pos);
-            boids[i] = Instantiate(boidPrefab, pos, Quaternion.identity) as GameObject;
+            boids[i] = Instantiate(boidPrefab, pos, Quaternion.identity);
             boidsArray[i].direction = boids[i].transform.forward;
         }
     }
@@ -79,33 +84,19 @@ public class SimpleFlocking : MonoBehaviour
         shader.SetInt("boidsCount", boidsCount);
     }
 
-    void Update()
+    public struct Boid
     {
-        shader.SetFloat("time", Time.time);
-        shader.SetFloat("deltaTime", Time.deltaTime);
+        public Vector3 position;
+        public Vector3 direction;
 
-        shader.Dispatch(kernelHandle, groupSizeX, 1, 1);
-
-        boidsBuffer.GetData(boidsArray);
-
-        for (int i = 0; i < boidsArray.Length; i++)
+        public Boid(Vector3 pos)
         {
-            boids[i].transform.localPosition = boidsArray[i].position;
-
-            if (!boidsArray[i].direction.Equals(Vector3.zero))
-            {
-                boids[i].transform.rotation = Quaternion.LookRotation(boidsArray[i].direction);
-            }
-
-        }
-    }
-
-    void OnDestroy()
-    {
-        if (boidsBuffer!=null)
-        {
-            boidsBuffer.Dispose();
+            position.x = pos.x;
+            position.y = pos.y;
+            position.z = pos.z;
+            direction.x = 0;
+            direction.y = 0;
+            direction.z = 0;
         }
     }
 }
-

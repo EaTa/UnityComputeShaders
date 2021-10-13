@@ -1,28 +1,16 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
 namespace PBDFluid
 {
-
     public class FluidBoundary : IDisposable
     {
-        private const int THREADS = 128;
-
-        public int NumParticles { get; private set; }
+        const int THREADS = 128;
 
         public Bounds Bounds;
 
-        public float ParticleRadius { get; private set; }
-
-        public float ParticleDiameter { get { return ParticleRadius * 2.0f; } }
-
-        public float Density { get; private set; }
-
-        public ComputeBuffer Positions { get; private set; }
-
-        private ComputeBuffer m_argsBuffer;
+        ComputeBuffer m_argsBuffer;
 
         public FluidBoundary(ParticleSource source, float radius, float density, Matrix4x4 RTS)
         {
@@ -34,8 +22,29 @@ namespace PBDFluid
             CreateBoundryPsi();
         }
 
+        public int NumParticles { get; }
+
+        public float ParticleRadius { get; }
+
+        public float ParticleDiameter => ParticleRadius * 2.0f;
+
+        public float Density { get; }
+
+        public ComputeBuffer Positions { get; private set; }
+
+        public void Dispose()
+        {
+            if (Positions != null)
+            {
+                Positions.Release();
+                Positions = null;
+            }
+
+            CBUtility.Release(ref m_argsBuffer);
+        }
+
         /// <summary>
-        /// Draws the mesh spheres when draw particles is enabled.
+        ///     Draws the mesh spheres when draw particles is enabled.
         /// </summary>
         public void Draw(Camera cam, Mesh mesh, Material material, int layer)
         {
@@ -46,35 +55,24 @@ namespace PBDFluid
             material.SetColor("color", Color.red);
             material.SetFloat("diameter", ParticleDiameter);
 
-            ShadowCastingMode castShadow = ShadowCastingMode.Off;
-            bool recieveShadow = false;
+            var castShadow = ShadowCastingMode.Off;
+            var recieveShadow = false;
 
-            Graphics.DrawMeshInstancedIndirect(mesh, 0, material, Bounds, m_argsBuffer, 0, null, castShadow, recieveShadow, layer, cam);
+            Graphics.DrawMeshInstancedIndirect(mesh, 0, material, Bounds, m_argsBuffer, 0, null, castShadow,
+                recieveShadow, layer, cam);
         }
 
-        public void Dispose()
+        void CreateParticles(ParticleSource source, Matrix4x4 RTS)
         {
-            if(Positions != null)
+            var positions = new Vector4[NumParticles];
+
+            var inf = float.PositiveInfinity;
+            var min = new Vector3(inf, inf, inf);
+            var max = new Vector3(-inf, -inf, -inf);
+
+            for (var i = 0; i < NumParticles; i++)
             {
-                Positions.Release();
-                Positions = null;
-            }
-
-            CBUtility.Release(ref m_argsBuffer);
-
-        }
-
-        private void CreateParticles(ParticleSource source, Matrix4x4 RTS)
-        {
-            Vector4[] positions = new Vector4[NumParticles];
-
-            float inf = float.PositiveInfinity;
-            Vector3 min = new Vector3(inf, inf, inf);
-            Vector3 max = new Vector3(-inf, -inf, -inf);
-
-            for (int i = 0; i < NumParticles; i++)
-            {
-                Vector4 pos = RTS * source.Positions[i];
+                var pos = RTS * source.Positions[i];
                 positions[i] = pos;
 
                 if (pos.x < min.x) min.x = pos.x;
@@ -99,12 +97,11 @@ namespace PBDFluid
 
             Positions = new ComputeBuffer(NumParticles, 4 * sizeof(float));
             Positions.SetData(positions);
-
         }
 
-        private void CreateArgBuffer(uint indexCount)
+        void CreateArgBuffer(uint indexCount)
         {
-            uint[] args = new uint[5] { 0, 0, 0, 0, 0 };
+            var args = new uint[5] { 0, 0, 0, 0, 0 };
             args[0] = indexCount;
             args[1] = (uint)NumParticles;
 
@@ -112,18 +109,17 @@ namespace PBDFluid
             m_argsBuffer.SetData(args);
         }
 
-        private void CreateBoundryPsi()
+        void CreateBoundryPsi()
         {
+            var cellSize = ParticleRadius * 4.0f;
+            var K = new SmoothingKernel(cellSize);
 
-            float cellSize = ParticleRadius * 4.0f;
-            SmoothingKernel K = new SmoothingKernel(cellSize);
-
-            GridHash grid = new GridHash(Bounds, NumParticles, cellSize);
+            var grid = new GridHash(Bounds, NumParticles, cellSize);
             grid.Process(Positions);
 
-            ComputeShader shader = Resources.Load("FluidBoundary") as ComputeShader;
+            var shader = Resources.Load("FluidBoundary") as ComputeShader;
 
-            int kernel = shader.FindKernel("ComputePsi");
+            var kernel = shader.FindKernel("ComputePsi");
 
             shader.SetFloat("Density", Density);
             shader.SetFloat("KernelRadiuse", K.Radius);
@@ -140,7 +136,7 @@ namespace PBDFluid
 
             shader.SetBuffer(kernel, "Boundary", Positions);
 
-            int groups = NumParticles / THREADS;
+            var groups = NumParticles / THREADS;
             if (NumParticles % THREADS != 0) groups++;
 
             //Fills the boundarys psi array so the fluid can
@@ -152,9 +148,6 @@ namespace PBDFluid
             shader.Dispatch(kernel, groups, 1, 1);
 
             grid.Dispose();
-
         }
-
     }
-
 }

@@ -1,23 +1,51 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 [RequireComponent(typeof(Camera))]
 public class BasePP : MonoBehaviour
 {
-    public ComputeShader shader = null;
+    public ComputeShader shader;
+    protected Vector2Int groupSize = new Vector2Int();
+    protected bool init;
+
+    protected int kernelHandle = -1;
 
     protected string kernelName = "CSMain";
 
-    protected Vector2Int texSize = new Vector2Int(0,0);
-    protected Vector2Int groupSize = new Vector2Int();
+    protected RenderTexture output;
+    protected RenderTexture renderedSource;
+
+    protected Vector2Int texSize = new Vector2Int(0, 0);
     protected Camera thisCamera;
 
-    protected RenderTexture output = null;
-    protected RenderTexture renderedSource = null;
+    protected virtual void OnEnable()
+    {
+        Init();
+    }
 
-    protected int kernelHandle = -1;
-    protected bool init = false;
+    protected virtual void OnDisable()
+    {
+        ClearTextures();
+        init = false;
+    }
+
+    protected virtual void OnDestroy()
+    {
+        ClearTextures();
+        init = false;
+    }
+
+    protected virtual void OnRenderImage(RenderTexture source, RenderTexture destination)
+    {
+        if (!init || shader == null)
+        {
+            Graphics.Blit(source, destination);
+        }
+        else
+        {
+            CheckResolution(out _);
+            DispatchWithSource(ref source, ref destination);
+        }
+    }
 
     protected virtual void Init()
     {
@@ -63,9 +91,9 @@ public class BasePP : MonoBehaviour
         ClearTexture(ref renderedSource);
     }
 
-    protected void CreateTexture(ref RenderTexture textureToMake, int divide=1)
+    protected void CreateTexture(ref RenderTexture textureToMake, int divide = 1)
     {
-        textureToMake = new RenderTexture(texSize.x/divide, texSize.y/divide, 0);
+        textureToMake = new RenderTexture(texSize.x / divide, texSize.y / divide, 0);
         textureToMake.enableRandomWrite = true;
         textureToMake.Create();
     }
@@ -73,47 +101,14 @@ public class BasePP : MonoBehaviour
 
     protected virtual void CreateTextures()
     {
-        
-    }
-
-    protected virtual void OnEnable()
-    {
-        Init();
-    }
-
-    protected virtual void OnDisable()
-    {
-        ClearTextures();
-        init = false;
-    }
-
-    protected virtual void OnDestroy()
-    {
-        ClearTextures();
-        init = false;
     }
 
     protected virtual void DispatchWithSource(ref RenderTexture source, ref RenderTexture destination)
     {
-        
     }
 
-    protected void CheckResolution(out bool resChange )
+    protected void CheckResolution(out bool resChange)
     {
         resChange = false;
     }
-
-    protected virtual void OnRenderImage(RenderTexture source, RenderTexture destination)
-    {
-        if (!init || shader == null)
-        {
-            Graphics.Blit(source, destination);
-        }
-        else
-        {
-            CheckResolution(out _);
-            DispatchWithSource(ref source, ref destination);
-        }
-    }
-
 }

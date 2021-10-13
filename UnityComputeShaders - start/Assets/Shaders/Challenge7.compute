@@ -52,7 +52,7 @@ void Advect(uint2 tid : SV_DispatchThreadID)
 
     float2 uv = (tid + 0.5) / dim;
     float2 duv = U_in[tid] * float2((float)dim.y / dim.x, 1) * DeltaTime;
-    uint2 sid = (uint2)((uv-duv) * dim);
+    uint2 sid = (uint2)((uv - duv) * dim);
 
     W_out[tid] = U_in[sid];
 }
@@ -67,7 +67,7 @@ void Force(uint2 tid : SV_DispatchThreadID)
     float2 pos = (tid + 0.5 - dim * 0.5) / dim.y;
     float amp = exp(-ForceExponent * distance(ForceOrigin, pos));
 
-    
+
     W_out[tid] = W_in[tid] + ForceVector * amp;
 }
 
@@ -79,7 +79,7 @@ void ProjectSetup(uint2 tid : SV_DispatchThreadID)
     W_in.GetDimensions(dim.x, dim.y);
 
     DivW_out[tid] = (W_in[tid + int2(1, 0)].x - W_in[tid - int2(1, 0)].x +
-                     W_in[tid + int2(0, 1)].y - W_in[tid - int2(0, 1)].y) * dim.y / 2;
+        W_in[tid + int2(0, 1)].y - W_in[tid - int2(0, 1)].y) * dim.y / 2;
 
     P_out[tid] = 0;
 }
@@ -113,7 +113,7 @@ void Project(uint2 tid : SV_DispatchThreadID)
 void Diffuse1(uint2 tid : SV_DispatchThreadID)
 {
     X1_out[tid] = (X1_in[tid - int2(1, 0)] + X1_in[tid + int2(1, 0)] +
-                   X1_in[tid - int2(0, 1)] + X1_in[tid + int2(0, 1)] + Alpha * B1_in[tid]) / Beta;
+        X1_in[tid - int2(0, 1)] + X1_in[tid + int2(0, 1)] + Alpha * B1_in[tid]) / Beta;
 }
 
 // Jacobi method with a vector field
@@ -121,5 +121,5 @@ void Diffuse1(uint2 tid : SV_DispatchThreadID)
 void Diffuse2(uint2 tid : SV_DispatchThreadID)
 {
     X2_out[tid] = (X2_in[tid - int2(1, 0)] + X2_in[tid + int2(1, 0)] +
-                   X2_in[tid - int2(0, 1)] + X2_in[tid + int2(0, 1)] + Alpha * B2_in[tid]) / Beta;
+        X2_in[tid - int2(0, 1)] + X2_in[tid + int2(0, 1)] + Alpha * B2_in[tid]) / Beta;
 }

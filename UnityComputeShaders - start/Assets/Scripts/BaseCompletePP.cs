@@ -1,23 +1,52 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 [RequireComponent(typeof(Camera))]
 public class BaseCompletePP : MonoBehaviour
 {
-    public ComputeShader shader = null;
+    public ComputeShader shader;
+    protected Vector2Int groupSize;
+    protected bool init;
+
+    protected int kernelHandle = -1;
 
     protected string kernelName = "CSMain";
 
+    protected RenderTexture output;
+    protected RenderTexture renderedSource;
+
     protected Vector2Int texSize = new Vector2Int(0, 0);
-    protected Vector2Int groupSize = new Vector2Int();
     protected Camera thisCamera;
 
-    protected RenderTexture output = null;
-    protected RenderTexture renderedSource = null;
+    protected virtual void OnEnable()
+    {
+        Init();
+        CreateTextures();
+    }
 
-    protected int kernelHandle = -1;
-    protected bool init = false;
+    protected virtual void OnDisable()
+    {
+        ClearTextures();
+        init = false;
+    }
+
+    protected virtual void OnDestroy()
+    {
+        ClearTextures();
+        init = false;
+    }
+
+    protected virtual void OnRenderImage(RenderTexture source, RenderTexture destination)
+    {
+        if (!init || shader == null)
+        {
+            Graphics.Blit(source, destination);
+        }
+        else
+        {
+            CheckResolution(out _);
+            DispatchWithSource(ref source, ref destination);
+        }
+    }
 
     protected virtual void Init()
     {
@@ -80,8 +109,8 @@ public class BaseCompletePP : MonoBehaviour
         {
             uint x, y;
             shader.GetKernelThreadGroupSizes(kernelHandle, out x, out y, out _);
-            groupSize.x = Mathf.CeilToInt((float)texSize.x / (float)x);
-            groupSize.y = Mathf.CeilToInt((float)texSize.y / (float)y);
+            groupSize.x = Mathf.CeilToInt(texSize.x / (float)x);
+            groupSize.y = Mathf.CeilToInt(texSize.y / (float)y);
         }
 
         CreateTexture(ref output);
@@ -89,24 +118,6 @@ public class BaseCompletePP : MonoBehaviour
 
         shader.SetTexture(kernelHandle, "source", renderedSource);
         shader.SetTexture(kernelHandle, "output", output);
-    }
-
-    protected virtual void OnEnable()
-    {
-        Init();
-        CreateTextures();
-    }
-
-    protected virtual void OnDisable()
-    {
-        ClearTextures();
-        init = false;
-    }
-
-    protected virtual void OnDestroy()
-    {
-        ClearTextures();
-        init = false;
     }
 
     protected virtual void DispatchWithSource(ref RenderTexture source, ref RenderTexture destination)
@@ -128,19 +139,4 @@ public class BaseCompletePP : MonoBehaviour
             CreateTextures();
         }
     }
-
-    protected virtual void OnRenderImage(RenderTexture source, RenderTexture destination)
-    {
-        if (!init || shader == null)
-        {
-            Graphics.Blit(source, destination);
-        }
-        else
-        {
-            CheckResolution(out _);
-            DispatchWithSource(ref source, ref destination);
-        }
-    }
-
 }
-

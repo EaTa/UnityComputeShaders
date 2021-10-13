@@ -1,16 +1,14 @@
 ﻿using UnityEngine;
-using System.Collections;
 
 public class SimpleNoise : MonoBehaviour
 {
-
     public ComputeShader shader;
     public int texResolution = 256;
 
-    Renderer rend;
+    int kernelHandle;
     RenderTexture outputTexture;
 
-    int kernelHandle;
+    Renderer rend;
 
     // Use this for initialization
     void Start()
@@ -25,7 +23,12 @@ public class SimpleNoise : MonoBehaviour
         InitShader();
     }
 
-    private void InitShader()
+    void Update()
+    {
+        DispatchShader(texResolution / 8, texResolution / 8);
+    }
+
+    void InitShader()
     {
         kernelHandle = shader.FindKernel("CSMain");
 
@@ -35,15 +38,9 @@ public class SimpleNoise : MonoBehaviour
         rend.material.SetTexture("_MainTex", outputTexture);
     }
 
-    private void DispatchShader(int x, int y)
+    void DispatchShader(int x, int y)
     {
         shader.SetFloat("time", Time.time);
         shader.Dispatch(kernelHandle, x, y, 1);
     }
-
-    void Update()
-    {
-        DispatchShader(texResolution / 8, texResolution / 8);
-    }
 }
-

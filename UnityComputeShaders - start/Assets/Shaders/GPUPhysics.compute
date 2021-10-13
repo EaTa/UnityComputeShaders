@@ -5,12 +5,12 @@
 
 inline float4 quat_concat(float4 q1, float4 q2)
 {
-  return float4(q1.w * q2.xyz + q2.w * q1.xyz + cross(q1.xyz, q2.xyz), q1.w * q2.w - dot(q1.xyz, q2.xyz));
+    return float4(q1.w * q2.xyz + q2.w * q1.xyz + cross(q1.xyz, q2.xyz), q1.w * q2.w - dot(q1.xyz, q2.xyz));
 }
 
 inline float3 quat_mul(float4 q, float3 v)
 {
-  return dot(q.xyz, v) * q.xyz + q.w * q.w * v + 2.0 * q.w * cross(q.xyz, v) - cross(cross(q.xyz, v), q.xyz);
+    return dot(q.xyz, v) * q.xyz + q.w * q.w * v + 2.0 * q.w * cross(q.xyz, v) - cross(cross(q.xyz, v), q.xyz);
 }
 
 // Kernels
@@ -22,27 +22,27 @@ inline float3 quat_mul(float4 q, float3 v)
 
 struct RigidBody
 {
-	float3 position;
-	float4 quaternion;
-	float3 velocity;
-	float3 angularVelocity;
-	int particleIndex;
-	int particleCount;
+    float3 position;
+    float4 quaternion;
+    float3 velocity;
+    float3 angularVelocity;
+    int particleIndex;
+    int particleCount;
 };
 
 struct Particle
 {
-	float3 position;
-	float3 velocity;
-	float3 force;
-	float3 localPosition;
-	float3 offsetPosition;
+    float3 position;
+    float3 velocity;
+    float3 force;
+    float3 localPosition;
+    float3 offsetPosition;
 };
 
 struct Voxel
 {
-	int4 vox1;
-	int4 vox2;
+    int4 vox1;
+    int4 vox2;
 };
 
 shared RWStructuredBuffer<RigidBody> rigidBodiesBuffer;
@@ -67,9 +67,8 @@ float particleMass;
 //
 //////////////////////////////
 [numthreads(RIGID_BODY_THREAD_COUNT,1,1)]
-void GenerateParticleValues (uint3 id : SV_DispatchThreadID)
+void GenerateParticleValues(uint3 id : SV_DispatchThreadID)
 {
-
 }
 
 /////////////////////////
@@ -85,15 +84,14 @@ float particleDiameter;
 
 float3 CollisionReaction(int j_id, int i_id)
 {
-	float3 force = 0;
+    float3 force = 0;
 
-	return force;
+    return force;
 }
 
 [numthreads(PARTICLE_THREAD_COUNT,1,1)]
-void CollisionDetection (uint3 id : SV_DispatchThreadID)
+void CollisionDetection(uint3 id : SV_DispatchThreadID)
 {
-	
 }
 
 ////////////////////////////
@@ -108,9 +106,8 @@ float linearForceScalar;
 int activeCount;
 
 [numthreads(RIGID_BODY_THREAD_COUNT,1,1)]
-void ComputeMomenta (uint3 id : SV_DispatchThreadID)
+void ComputeMomenta(uint3 id : SV_DispatchThreadID)
 {
-	
 }
 
 /////////////////////////////
@@ -119,7 +116,6 @@ void ComputeMomenta (uint3 id : SV_DispatchThreadID)
 // Per RigidBody
 // Use rigidBodyForce and rigidBodyTorque to compute the rigid body position and rotation. 
 [numthreads(RIGID_BODY_THREAD_COUNT,1,1)]
-void ComputePositionAndRotation (uint3 id : SV_DispatchThreadID)
+void ComputePositionAndRotation(uint3 id : SV_DispatchThreadID)
 {
-	
 }

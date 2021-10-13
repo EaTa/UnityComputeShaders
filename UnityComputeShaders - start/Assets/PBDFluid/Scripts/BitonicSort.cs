@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace PBDFluid
 {
-
     public class BitonicSort : IDisposable
     {
         //Range of min/max particles for various block sizes.
@@ -25,29 +23,29 @@ namespace PBDFluid
         //1024 * 1024 = 1048576
 
         //Num threads for the copy and fill kernels.
-        private const int THREADS = 128;
+        const int THREADS = 128;
 
         // The number of elements to sort is limited to an even power of 2.
         // the min/max range of particles for these sizes are shown above.
         // If you need to resize these you must also change the same values in the shader.
         // TODO - Have a shader for each range and automatically pick which one to use.
-        private const int BITONIC_BLOCK_SIZE = 512;
-        private const int TRANSPOSE_BLOCK_SIZE = 16;
+        const int BITONIC_BLOCK_SIZE = 512;
+        const int TRANSPOSE_BLOCK_SIZE = 16;
 
         public const int MAX_ELEMENTS = BITONIC_BLOCK_SIZE * BITONIC_BLOCK_SIZE;
         public const int MIN_ELEMENTS = BITONIC_BLOCK_SIZE * TRANSPOSE_BLOCK_SIZE;
 
-        private const int MATRIX_WIDTH = BITONIC_BLOCK_SIZE;
-        
-        public int NumElements { get; private set; }
+        const int MATRIX_WIDTH = BITONIC_BLOCK_SIZE;
 
-        private ComputeBuffer m_buffer1, m_buffer2;
+        readonly int m_bitonicKernel;
+        readonly int m_transposeKernel;
 
-        private ComputeShader m_shader;
+        ComputeBuffer m_buffer1, m_buffer2;
 
-        int m_bitonicKernel, m_transposeKernel;
+        readonly int m_fillKernel;
+        readonly int m_copyKernel;
 
-        int m_fillKernel, m_copyKernel;
+        readonly ComputeShader m_shader;
 
         public BitonicSort(int count)
         {
@@ -62,6 +60,8 @@ namespace PBDFluid
             m_copyKernel = m_shader.FindKernel("Copy");
         }
 
+        public int NumElements { get; }
+
         public void Dispose()
         {
             CBUtility.Release(ref m_buffer1);
@@ -70,8 +70,7 @@ namespace PBDFluid
 
         public void Sort(ComputeBuffer input)
         {
-
-            int count = input.count;
+            var count = input.count;
             if (count < MIN_ELEMENTS)
                 throw new ArgumentException("count < MIN_ELEMENTS");
 
@@ -83,7 +82,7 @@ namespace PBDFluid
             m_shader.SetBuffer(m_fillKernel, "Data", m_buffer1);
             m_shader.Dispatch(m_fillKernel, NumElements / THREADS, 1, 1);
 
-            int MATRIX_HEIGHT = NumElements / BITONIC_BLOCK_SIZE;
+            var MATRIX_HEIGHT = NumElements / BITONIC_BLOCK_SIZE;
 
             m_shader.SetInt("Width", MATRIX_HEIGHT);
             m_shader.SetInt("Height", MATRIX_WIDTH);
@@ -91,7 +90,7 @@ namespace PBDFluid
 
             // Sort the data
             // First sort the rows for the levels <= to the block size
-            for (int level = 2; level <= BITONIC_BLOCK_SIZE; level = level * 2)
+            for (var level = 2; level <= BITONIC_BLOCK_SIZE; level = level * 2)
             {
                 // Sort the row data
                 m_shader.SetInt("Level", level);
@@ -101,7 +100,7 @@ namespace PBDFluid
 
             // Then sort the rows and columns for the levels > than the block size
             // Transpose. Sort the Columns. Transpose. Sort the Rows.
-            for (int level = (BITONIC_BLOCK_SIZE * 2); level <= NumElements; level = level * 2)
+            for (var level = BITONIC_BLOCK_SIZE * 2; level <= NumElements; level = level * 2)
             {
                 // Transpose the data from buffer 1 into buffer 2
                 m_shader.SetInt("Level", level / BITONIC_BLOCK_SIZE);
@@ -110,7 +109,8 @@ namespace PBDFluid
                 m_shader.SetInt("Height", MATRIX_HEIGHT);
                 m_shader.SetBuffer(m_transposeKernel, "Input", m_buffer1);
                 m_shader.SetBuffer(m_transposeKernel, "Data", m_buffer2);
-                m_shader.Dispatch(m_transposeKernel, MATRIX_WIDTH / TRANSPOSE_BLOCK_SIZE, MATRIX_HEIGHT / TRANSPOSE_BLOCK_SIZE, 1);
+                m_shader.Dispatch(m_transposeKernel, MATRIX_WIDTH / TRANSPOSE_BLOCK_SIZE,
+                    MATRIX_HEIGHT / TRANSPOSE_BLOCK_SIZE, 1);
 
                 // Sort the transposed column data
                 m_shader.SetBuffer(m_bitonicKernel, "Data", m_buffer2);
@@ -123,7 +123,8 @@ namespace PBDFluid
                 m_shader.SetInt("Height", MATRIX_WIDTH);
                 m_shader.SetBuffer(m_transposeKernel, "Input", m_buffer2);
                 m_shader.SetBuffer(m_transposeKernel, "Data", m_buffer1);
-                m_shader.Dispatch(m_transposeKernel, MATRIX_HEIGHT / TRANSPOSE_BLOCK_SIZE, MATRIX_WIDTH / TRANSPOSE_BLOCK_SIZE, 1);
+                m_shader.Dispatch(m_transposeKernel, MATRIX_HEIGHT / TRANSPOSE_BLOCK_SIZE,
+                    MATRIX_WIDTH / TRANSPOSE_BLOCK_SIZE, 1);
 
                 // Sort the row data
                 m_shader.SetBuffer(m_bitonicKernel, "Data", m_buffer1);
@@ -136,7 +137,7 @@ namespace PBDFluid
             m_shader.Dispatch(m_copyKernel, NumElements / THREADS, 1, 1);
         }
 
-        private int FindNumElements(int count)
+        int FindNumElements(int count)
         {
             if (count < MIN_ELEMENTS)
                 throw new ArgumentException("Data != MIN_ELEMENTS. Need to decrease Bitonic size.");
@@ -146,17 +147,14 @@ namespace PBDFluid
 
             int NumElements;
 
-            int level = TRANSPOSE_BLOCK_SIZE;
+            var level = TRANSPOSE_BLOCK_SIZE;
             do
             {
                 NumElements = BITONIC_BLOCK_SIZE * level;
                 level *= 2;
-            }
-            while (NumElements < count);
+            } while (NumElements < count);
 
             return NumElements;
         }
-
     }
-
 }

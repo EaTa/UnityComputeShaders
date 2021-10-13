@@ -1,17 +1,33 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
 namespace PBDFluid
 {
-
     public class FluidBody : IDisposable
     {
-
-        public int NumParticles { get; private set; }
-
         public Bounds Bounds;
+
+        ComputeBuffer m_argsBuffer;
+
+        public FluidBody(ParticleSource source, float radius, float density, Matrix4x4 RTS)
+        {
+            NumParticles = source.NumParticles;
+            Density = density;
+            Viscosity = 0.002f;
+            Dampning = 0.0f;
+
+            ParticleRadius = radius;
+            ParticleVolume = 4.0f / 3.0f * Mathf.PI * Mathf.Pow(radius, 3);
+            ParticleMass = ParticleVolume * Density;
+
+            Densities = new ComputeBuffer(NumParticles, sizeof(float));
+            Pressures = new ComputeBuffer(NumParticles, sizeof(float));
+
+            CreateParticles(source, RTS);
+        }
+
+        public int NumParticles { get; }
 
         public float Density { get; set; }
 
@@ -19,13 +35,13 @@ namespace PBDFluid
 
         public float Dampning { get; set; }
 
-        public float ParticleRadius { get; private set; }
+        public float ParticleRadius { get; }
 
-        public float ParticleDiameter { get { return ParticleRadius * 2.0f; } }
+        public float ParticleDiameter => ParticleRadius * 2.0f;
 
         public float ParticleMass { get; set; }
 
-        public float ParticleVolume { get; private set; }
+        public float ParticleVolume { get; }
 
         public ComputeBuffer Pressures { get; private set; }
 
@@ -37,46 +53,8 @@ namespace PBDFluid
 
         public ComputeBuffer[] Velocities { get; private set; }
 
-        private ComputeBuffer m_argsBuffer;
-
-        public FluidBody(ParticleSource source, float radius, float density, Matrix4x4 RTS)
-        {
-            NumParticles = source.NumParticles;
-            Density = density;
-            Viscosity = 0.002f;
-            Dampning = 0.0f;
-
-            ParticleRadius = radius;
-            ParticleVolume = (4.0f / 3.0f) * Mathf.PI * Mathf.Pow(radius, 3);
-            ParticleMass = ParticleVolume * Density;
-
-            Densities = new ComputeBuffer(NumParticles, sizeof(float));
-            Pressures = new ComputeBuffer(NumParticles, sizeof(float));
-
-            CreateParticles(source, RTS);
-        }
-
-        /// <summary>
-        /// Draws the mesh spheres when draw particles is enabled.
-        /// </summary>
-        public void Draw(Camera cam, Mesh mesh, Material material, int layer)
-        {
-            if (m_argsBuffer == null)
-                CreateArgBuffer(mesh.GetIndexCount(0));
-
-            material.SetBuffer("positions", Positions);
-            material.SetColor("color", Color.white);
-            material.SetFloat("diameter", ParticleDiameter);
-
-            ShadowCastingMode castShadow = ShadowCastingMode.On;
-            bool recieveShadow = true;
-
-            Graphics.DrawMeshInstancedIndirect(mesh, 0, material, Bounds, m_argsBuffer, 0, null, castShadow, recieveShadow, layer, cam);
-        }
-
         public void Dispose()
         {
-
             if (Positions != null)
             {
                 Positions.Release();
@@ -100,19 +78,38 @@ namespace PBDFluid
             CBUtility.Release(ref m_argsBuffer);
         }
 
-        private void CreateParticles(ParticleSource source, Matrix4x4 RTS)
+        /// <summary>
+        ///     Draws the mesh spheres when draw particles is enabled.
+        /// </summary>
+        public void Draw(Camera cam, Mesh mesh, Material material, int layer)
         {
-            Vector4[] positions = new Vector4[NumParticles];
-            Vector4[] predicted = new Vector4[NumParticles];
-            Vector4[] velocities = new Vector4[NumParticles];
+            if (m_argsBuffer == null)
+                CreateArgBuffer(mesh.GetIndexCount(0));
 
-            float inf = float.PositiveInfinity;
-            Vector3 min = new Vector3(inf, inf, inf);
-            Vector3 max = new Vector3(-inf, -inf, -inf);
+            material.SetBuffer("positions", Positions);
+            material.SetColor("color", Color.white);
+            material.SetFloat("diameter", ParticleDiameter);
 
-            for (int i = 0; i < NumParticles; i++)
+            var castShadow = ShadowCastingMode.On;
+            var recieveShadow = true;
+
+            Graphics.DrawMeshInstancedIndirect(mesh, 0, material, Bounds, m_argsBuffer, 0, null, castShadow,
+                recieveShadow, layer, cam);
+        }
+
+        void CreateParticles(ParticleSource source, Matrix4x4 RTS)
+        {
+            var positions = new Vector4[NumParticles];
+            var predicted = new Vector4[NumParticles];
+            var velocities = new Vector4[NumParticles];
+
+            var inf = float.PositiveInfinity;
+            var min = new Vector3(inf, inf, inf);
+            var max = new Vector3(-inf, -inf, -inf);
+
+            for (var i = 0; i < NumParticles; i++)
             {
-                Vector4 pos = RTS * source.Positions[i];
+                var pos = RTS * source.Positions[i];
                 positions[i] = pos;
                 predicted[i] = pos;
 
@@ -157,17 +154,14 @@ namespace PBDFluid
             Velocities[1].SetData(velocities);
         }
 
-        private void CreateArgBuffer(uint indexCount)
+        void CreateArgBuffer(uint indexCount)
         {
-            uint[] args = new uint[5] { 0, 0, 0, 0, 0 };
+            var args = new uint[5] { 0, 0, 0, 0, 0 };
             args[0] = indexCount;
             args[1] = (uint)NumParticles;
 
             m_argsBuffer = new ComputeBuffer(1, args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
             m_argsBuffer.SetData(args);
         }
-
     }
-
-
 }

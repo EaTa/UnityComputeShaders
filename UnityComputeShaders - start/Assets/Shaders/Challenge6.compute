@@ -1,5 +1,5 @@
 ﻿// Each #kernel tells which function to compile; you can have many kernels
-#define THREADGROUPSIZE 128 
+#define THREADGROUPSIZE 128
 #pragma kernel UpdateGrass
 
 struct GrassClump
@@ -10,6 +10,7 @@ struct GrassClump
     float4 quaternion;
     float noise;
 };
+
 RWStructuredBuffer<GrassClump> clumpsBuffer;
 
 float maxLean;
@@ -20,10 +21,11 @@ float time;
 
 #include "noiseSimplex.cginc"
 
-float4 MapVector(float3 v1, float3 v2){
+float4 MapVector(float3 v1, float3 v2)
+{
     v1 = normalize(v1);
     v2 = normalize(v2);
-    float3 v = v1+v2;
+    float3 v = v1 + v2;
     v = normalize(v);
     float4 q = 0;
     q.w = dot(v, v2);
@@ -32,17 +34,20 @@ float4 MapVector(float3 v1, float3 v2){
 }
 
 [numthreads(THREADGROUPSIZE,1,1)]
-void UpdateGrass (uint3 id : SV_DispatchThreadID)
+void UpdateGrass(uint3 id : SV_DispatchThreadID)
 {
     GrassClump clump = clumpsBuffer[id.x];
 
     float3 relativePosition = clump.position - tramplePos.xyz;
     float dist = length(relativePosition);
 
-    if (dist<trampleRadius){
-        clump.trample = (trampleRadius - dist)/trampleRadius;
-        clump.quaternion = MapVector(float3(0,1,0), relativePosition);
-    }else if (clump.trample!=0){
+    if (dist < trampleRadius)
+    {
+        clump.trample = (trampleRadius - dist) / trampleRadius;
+        clump.quaternion = MapVector(float3(0, 1, 0), relativePosition);
+    }
+    else if (clump.trample != 0)
+    {
         clump.trample *= 0.98;
     }
 

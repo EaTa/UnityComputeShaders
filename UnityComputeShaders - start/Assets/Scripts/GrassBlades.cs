@@ -1,55 +1,36 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class GrassBlades : MonoBehaviour
 {
-    struct GrassBlade
-    {
-        public Vector3 position;
-        public float bend;
-        public float noise;
-        public float fade;
-
-        public GrassBlade( Vector3 pos)
-        {
-            position.x = pos.x;
-            position.y = pos.y;
-            position.z = pos.z;
-            bend = 0;
-            noise = Random.Range(0.5f, 1) * 2 - 1;
-            fade = Random.Range(0.5f, 1);
-        }
-    }
-    int SIZE_GRASS_BLADE = 6 * sizeof(float);
-
     public Material material;
     public ComputeShader shader;
     public Material visualizeNoise;
-    public bool viewNoise = false;
-    [Range(0,1)]
-    public float density;
-    [Range(0.1f,3)]
-    public float scale;
-    [Range(10, 45)]
-    public float maxBend;
-    [Range(0, 2)]
-    public float windSpeed;
-    [Range(0, 360)]
-    public float windDirection;
-    [Range(10, 1000)]
-    public float windScale;
+    public bool viewNoise;
+
+    [Range(0, 1)] public float density;
+
+    [Range(0.1f, 3)] public float scale;
+
+    [Range(10, 45)] public float maxBend;
+
+    [Range(0, 2)] public float windSpeed;
+
+    [Range(0, 360)] public float windDirection;
+
+    [Range(10, 1000)] public float windScale;
+
+    readonly uint[] argsArray = { 0, 0, 0, 0, 0 };
+    ComputeBuffer argsBuffer;
+    Mesh blade;
+    GrassBlade[] bladesArray;
 
     ComputeBuffer bladesBuffer;
-    ComputeBuffer argsBuffer;
-    GrassBlade[] bladesArray;
-    uint[] argsArray = new uint[] { 0, 0, 0, 0, 0 };
     Bounds bounds;
-    int timeID;
+    Material groundMaterial;
     int groupSize;
     int kernelBendGrass;
-    Mesh blade;
-    Material groundMaterial;
+    readonly int SIZE_GRASS_BLADE = 6 * sizeof(float);
+    int timeID;
 
     Mesh Blade
     {
@@ -65,14 +46,14 @@ public class GrassBlades : MonoBehaviour
             {
                 mesh = new Mesh();
 
-                float height = 0.2f;
-                float rowHeight = height / 4;
-                float halfWidth = height / 10;
+                var height = 0.2f;
+                var rowHeight = height / 4;
+                var halfWidth = height / 10;
 
                 //1. Use the above variables to define the vertices array
 
                 //2. Define the normals array, hint: each vertex uses the same normal
-                Vector3 normal = new Vector3(0, 0, -1);
+                var normal = new Vector3(0, 0, -1);
 
                 //3. Define the uvs array
 
@@ -81,34 +62,49 @@ public class GrassBlades : MonoBehaviour
                 //5. Assign the mesh properties using the arrays
                 //   for indices use
                 //   mesh.SetIndices( indices, MeshTopology.Triangles, 0 );
-
             }
 
             return mesh;
         }
     }
+
     // Start is called before the first frame update
     void Start()
     {
         bounds = new Bounds(Vector3.zero, new Vector3(30, 30, 30));
         blade = Blade;
 
-        MeshRenderer renderer = GetComponent<MeshRenderer>();
+        var renderer = GetComponent<MeshRenderer>();
         groundMaterial = renderer.material;
 
         InitShader();
     }
 
-    private void OnValidate()
+    // Update is called once per frame
+    void Update()
+    {
+        shader.SetFloat(timeID, Time.time);
+        shader.Dispatch(kernelBendGrass, groupSize, 1, 1);
+
+        if (!viewNoise) Graphics.DrawMeshInstancedIndirect(blade, 0, material, bounds, argsBuffer);
+    }
+
+    void OnDestroy()
+    {
+        bladesBuffer.Release();
+        argsBuffer.Release();
+    }
+
+    void OnValidate()
     {
         if (groundMaterial != null)
         {
-            MeshRenderer renderer = GetComponent<MeshRenderer>();
+            var renderer = GetComponent<MeshRenderer>();
 
-            renderer.material = (viewNoise) ? visualizeNoise : groundMaterial;
+            renderer.material = viewNoise ? visualizeNoise : groundMaterial;
 
             //TO DO: set wind using wind direction, speed and noise scale
-            Vector4 wind = new Vector4();
+            var wind = new Vector4();
             shader.SetVector("wind", wind);
             visualizeNoise.SetVector("wind", wind);
         }
@@ -116,30 +112,30 @@ public class GrassBlades : MonoBehaviour
 
     void InitShader()
     {
-        MeshFilter mf = GetComponent<MeshFilter>();
-        Bounds bounds = mf.sharedMesh.bounds;
+        var mf = GetComponent<MeshFilter>();
+        var bounds = mf.sharedMesh.bounds;
 
-        Vector3 blades = bounds.extents;
-        Vector3 vec = transform.localScale / 0.1f * density;
+        var blades = bounds.extents;
+        var vec = transform.localScale / 0.1f * density;
         blades.x *= vec.x;
         blades.z *= vec.z;
 
-        int total = (int)blades.x * (int)blades.z * 20;
+        var total = (int)blades.x * (int)blades.z * 20;
 
         kernelBendGrass = shader.FindKernel("BendGrass");
 
         uint threadGroupSize;
         shader.GetKernelThreadGroupSizes(kernelBendGrass, out threadGroupSize, out _, out _);
-        groupSize = Mathf.CeilToInt((float)total / (float)threadGroupSize);
-        int count = groupSize * (int)threadGroupSize;
+        groupSize = Mathf.CeilToInt(total / (float)threadGroupSize);
+        var count = groupSize * (int)threadGroupSize;
 
         bladesArray = new GrassBlade[count];
 
-        for(int i=0; i<count; i++)
+        for (var i = 0; i < count; i++)
         {
-            Vector3 pos = new Vector3( Random.value * bounds.extents.x * 2 - bounds.extents.x + bounds.center.x,
-                                       0,
-                                       Random.value * bounds.extents.z * 2 - bounds.extents.z + bounds.center.z);
+            var pos = new Vector3(Random.value * bounds.extents.x * 2 - bounds.extents.x + bounds.center.x,
+                0,
+                Random.value * bounds.extents.z * 2 - bounds.extents.z + bounds.center.z);
             pos = transform.TransformPoint(pos);
             bladesArray[i] = new GrassBlade(pos);
         }
@@ -150,7 +146,7 @@ public class GrassBlades : MonoBehaviour
         shader.SetBuffer(kernelBendGrass, "bladesBuffer", bladesBuffer);
         shader.SetFloat("maxBend", maxBend * Mathf.PI / 180);
         //TO DO: set wind using wind direction, speed and noise scale
-        Vector4 wind = new Vector4();
+        var wind = new Vector4();
         shader.SetVector("wind", wind);
 
         timeID = Shader.PropertyToID("time");
@@ -164,21 +160,21 @@ public class GrassBlades : MonoBehaviour
         material.SetFloat("_Scale", scale);
     }
 
-    // Update is called once per frame
-    void Update()
+    struct GrassBlade
     {
-        shader.SetFloat(timeID, Time.time);
-        shader.Dispatch(kernelBendGrass, groupSize, 1, 1);
+        public Vector3 position;
+        public float bend;
+        public float noise;
+        public float fade;
 
-        if (!viewNoise)
+        public GrassBlade(Vector3 pos)
         {
-            Graphics.DrawMeshInstancedIndirect(blade, 0, material, bounds, argsBuffer);
+            position.x = pos.x;
+            position.y = pos.y;
+            position.z = pos.z;
+            bend = 0;
+            noise = Random.Range(0.5f, 1) * 2 - 1;
+            fade = Random.Range(0.5f, 1);
         }
-    }
-
-    private void OnDestroy()
-    {
-        bladesBuffer.Release();
-        argsBuffer.Release();
     }
 }

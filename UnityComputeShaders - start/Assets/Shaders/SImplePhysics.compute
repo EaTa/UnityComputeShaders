@@ -4,9 +4,9 @@
 
 struct Ball
 {
-	float3 position;
-	float3 velocity;
-	float4 color;
+    float3 position;
+    float3 velocity;
+    float4 color;
 };
 
 RWStructuredBuffer<Ball> ballsBuffer;
@@ -24,13 +24,11 @@ float floorY;
 #define LIMITS_MIN_Y floorY
 
 [numthreads(GROUP_SIZE,1,1)]
-void CSMain (uint3 id : SV_DispatchThreadID)
+void CSMain(uint3 id : SV_DispatchThreadID)
 {
-	Ball ball = ballsBuffer[id.x];
+    Ball ball = ballsBuffer[id.x];
 
-	ball.position += ball.velocity * deltaTime;
+    ball.position += ball.velocity * deltaTime;
 
-	ballsBuffer[id.x] = ball;
+    ballsBuffer[id.x] = ball;
 }
-
-

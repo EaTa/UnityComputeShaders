@@ -1,19 +1,17 @@
 ﻿using UnityEngine;
-using System.Collections;
 
 public class Challenge2 : MonoBehaviour
 {
-
     public ComputeShader shader;
     public int texResolution = 1024;
 
-    Renderer rend;
-    RenderTexture outputTexture;
+    public Color fillColor = new Color(1.0f, 1.0f, 0.0f, 1.0f);
+    public Color clearColor = new Color(0, 0, 0.3f, 1.0f);
 
     int kernelHandle;
+    RenderTexture outputTexture;
 
-    public Color fillColor = new Color(1.0f, 1.0f, 0.0f, 1.0f);
-    public Color clearColor = new Color( 0, 0, 0.3f, 1.0f );
+    Renderer rend;
 
     // Use this for initialization
     void Start()
@@ -28,7 +26,12 @@ public class Challenge2 : MonoBehaviour
         InitShader();
     }
 
-    private void InitShader()
+    void Update()
+    {
+        DispatchShader(texResolution / 8, texResolution / 8);
+    }
+
+    void InitShader()
     {
         kernelHandle = shader.FindKernel("CSMain");
 
@@ -37,18 +40,13 @@ public class Challenge2 : MonoBehaviour
 
         shader.SetInt("texResolution", texResolution);
         shader.SetTexture(kernelHandle, "Result", outputTexture);
-       
+
         rend.material.SetTexture("_MainTex", outputTexture);
     }
 
-    private void DispatchShader(int x, int y)
+    void DispatchShader(int x, int y)
     {
-    	shader.SetFloat( "time", Time.time );
+        shader.SetFloat("time", Time.time);
         shader.Dispatch(kernelHandle, x, y, 1);
     }
-
-    void Update(){
-        DispatchShader(texResolution / 8, texResolution / 8);
-    }
 }
-

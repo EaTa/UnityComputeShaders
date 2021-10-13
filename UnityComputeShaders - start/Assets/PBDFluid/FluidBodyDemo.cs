@@ -1,16 +1,25 @@
-using UnityEngine;
-using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace PBDFluid
 {
-
-    public enum SIMULATION_SIZE {  LOW, MEDIUM, HIGH }
+    public enum SIMULATION_SIZE
+    {
+        LOW,
+        MEDIUM,
+        HIGH
+    }
 
     public class FluidBodyDemo : MonoBehaviour
     {
+        const float timeStep = 1.0f / 60.0f;
 
-        private const float timeStep = 1.0f / 60.0f;
+        static readonly IList<int> m_cube = new[]
+        {
+            0, 1, 1, 2, 2, 3, 3, 0,
+            4, 5, 5, 6, 6, 7, 7, 4,
+            0, 4, 1, 5, 2, 6, 3, 7
+        };
 
         public Material m_fluidParticleMat;
 
@@ -20,11 +29,11 @@ namespace PBDFluid
 
         public bool m_drawLines = true;
 
-        public bool m_drawGrid = false;
+        public bool m_drawGrid;
 
-        public bool m_drawBoundaryParticles = false;
+        public bool m_drawBoundaryParticles;
 
-        public bool m_drawFluidParticles = false;
+        public bool m_drawFluidParticles;
 
         public bool m_drawFluidVolume = true;
 
@@ -34,22 +43,24 @@ namespace PBDFluid
 
         public Mesh m_sphereMesh;
 
-        private FluidBody m_fluid;
+        FluidBoundary m_boundary;
 
-        private FluidBoundary m_boundary;
+        readonly Vector4[] m_corners = new Vector4[8];
 
-        private FluidSolver m_solver;
-
-        private RenderVolume m_volume;
+        FluidBody m_fluid;
 
         Bounds m_fluidSource, m_outerSource, m_innerSource;
 
-        private bool wasError;
+        FluidSolver m_solver;
 
-        private void Start()
+        RenderVolume m_volume;
+
+        bool wasError;
+
+        void Start()
         {
-            float radius = 0.08f;
-            float density = 1000.0f;
+            var radius = 0.08f;
+            var density = 1000.0f;
 
             //A smaller radius means more particles.
             //If the number of particles is to low or high
@@ -61,7 +72,7 @@ namespace PBDFluid
             //as the boundary is thinner and the fluid many step
             //through and leak out.
 
-            switch(m_simulationSize)
+            switch (m_simulationSize)
             {
                 case SIMULATION_SIZE.LOW:
                     radius = 0.1f;
@@ -95,9 +106,9 @@ namespace PBDFluid
             }
         }
 
-        private void Update()
+        void Update()
         {
-            if(wasError) return;
+            if (wasError) return;
 
             if (m_run)
             {
@@ -105,7 +116,7 @@ namespace PBDFluid
                 m_volume.FillVolume(m_fluid, m_solver.Hash, m_solver.Kernel);
             }
 
-             m_volume.Hide = !m_drawFluidVolume;
+            m_volume.Hide = !m_drawFluidVolume;
 
             if (m_drawBoundaryParticles)
                 m_boundary.Draw(Camera.main, m_sphereMesh, m_boundaryParticleMat, 0);
@@ -114,7 +125,7 @@ namespace PBDFluid
                 m_fluid.Draw(Camera.main, m_sphereMesh, m_fluidParticleMat, 0);
         }
 
-        private void OnDestroy()
+        void OnDestroy()
         {
             m_boundary.Dispose();
             m_fluid.Dispose();
@@ -122,9 +133,9 @@ namespace PBDFluid
             m_volume.Dispose();
         }
 
-        private void OnRenderObject()
+        void OnRenderObject()
         {
-            Camera camera = Camera.current;
+            var camera = Camera.current;
             if (camera != Camera.main) return;
 
             if (m_drawLines)
@@ -137,17 +148,14 @@ namespace PBDFluid
                 DrawBounds(camera, Color.blue, m_fluidSource);
             }
 
-            if(m_drawGrid)
-            {
-                m_solver.Hash.DrawGrid(camera, Color.yellow);
-            }
+            if (m_drawGrid) m_solver.Hash.DrawGrid(camera, Color.yellow);
         }
 
-        private void CreateBoundary(float radius, float density)
+        void CreateBoundary(float radius, float density)
         {
-            Bounds innerBounds = new Bounds();
-            Vector3 min = new Vector3(-8, 0, -2);
-            Vector3 max = new Vector3(8, 10, 2);
+            var innerBounds = new Bounds();
+            var min = new Vector3(-8, 0, -2);
+            var max = new Vector3(8, 10, 2);
             innerBounds.SetMinMax(min, max);
 
             //Make the boundary 1 particle thick.
@@ -158,7 +166,7 @@ namespace PBDFluid
             //bounds other wise.
 
             float thickness = 1;
-            float diameter = radius * 2;
+            var diameter = radius * 2;
             min.x -= diameter * thickness * 1.2f;
             min.y -= diameter * thickness * 1.2f;
             min.z -= diameter * thickness * 1.2f;
@@ -167,7 +175,7 @@ namespace PBDFluid
             max.y += diameter * thickness * 1.2f;
             max.z += diameter * thickness * 1.2f;
 
-            Bounds outerBounds = new Bounds();
+            var outerBounds = new Bounds();
             outerBounds.SetMinMax(min, max);
 
             //The source will create a array of particles
@@ -181,11 +189,11 @@ namespace PBDFluid
             m_outerSource = outerBounds;
         }
 
-        private void CreateFluid( float radius, float density)
+        void CreateFluid(float radius, float density)
         {
-            Bounds bounds = new Bounds();
-            Vector3 min = new Vector3(-8, 0, -1);
-            Vector3 max = new Vector3(-4, 8, 2);
+            var bounds = new Bounds();
+            var min = new Vector3(-8, 0, -1);
+            var max = new Vector3(-4, 8, 2);
 
             min.x += radius;
             min.y += radius;
@@ -201,8 +209,8 @@ namespace PBDFluid
             //evenly spaced inside the bounds. 
             //Multiple the spacing by 0.9 to pack more
             //particles into bounds.
-            float diameter = radius * 2;
-            ParticlesFromBounds source = new ParticlesFromBounds(diameter * 0.9f, bounds);
+            var diameter = radius * 2;
+            var source = new ParticlesFromBounds(diameter * 0.9f, bounds);
             Debug.Log("Fluid Particles = " + source.NumParticles);
 
             m_fluid = new FluidBody(source, radius, density, Matrix4x4.identity);
@@ -210,14 +218,6 @@ namespace PBDFluid
             m_fluidSource = bounds;
         }
 
-        private static IList<int> m_cube = new int[]
-        {
-            0, 1, 1, 2, 2, 3, 3, 0,
-            4, 5, 5, 6, 6, 7, 7, 4,
-            0, 4, 1, 5, 2, 6, 3, 7
-        };
-
-        Vector4[] m_corners = new Vector4[8];
         public void GetCorners(Bounds b)
         {
             m_corners[0] = new Vector4(b.min.x, b.min.y, b.min.z, 1);
@@ -231,13 +231,11 @@ namespace PBDFluid
             m_corners[7] = new Vector4(b.max.x, b.max.y, b.min.z, 1);
         }
 
-        private void DrawBounds(Camera cam, Color col, Bounds bounds)
+        void DrawBounds(Camera cam, Color col, Bounds bounds)
         {
             GetCorners(bounds);
             DrawLines.LineMode = LINE_MODE.LINES;
             DrawLines.Draw(cam, m_corners, col, Matrix4x4.identity, m_cube);
         }
-
     }
-
 }

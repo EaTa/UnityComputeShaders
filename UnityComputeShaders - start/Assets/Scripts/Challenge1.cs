@@ -1,16 +1,14 @@
 ﻿using UnityEngine;
-using System.Collections;
 
 public class Challenge1 : MonoBehaviour
 {
-
     public ComputeShader shader;
     public int texResolution = 1024;
 
-    Renderer rend;
+    int kernelHandle;
     RenderTexture outputTexture;
 
-    int kernelHandle;
+    Renderer rend;
 
     // Use this for initialization
     void Start()
@@ -25,31 +23,27 @@ public class Challenge1 : MonoBehaviour
         InitShader();
     }
 
-    private void InitShader()
+    void Update()
+    {
+        if (Input.GetKeyUp(KeyCode.U)) DispatchShader(texResolution / 8, texResolution / 8);
+    }
+
+    void InitShader()
     {
         kernelHandle = shader.FindKernel("Square");
 
-		//Create a Vector4 with parameters x, y, width, height
+        //Create a Vector4 with parameters x, y, width, height
         //Pass this to the shader using SetVector
-        
+
         shader.SetTexture(kernelHandle, "Result", outputTexture);
-       
+
         rend.material.SetTexture("_MainTex", outputTexture);
 
         DispatchShader(texResolution / 8, texResolution / 8);
     }
 
-    private void DispatchShader(int x, int y)
+    void DispatchShader(int x, int y)
     {
         shader.Dispatch(kernelHandle, x, y, 1);
     }
-
-    void Update()
-    {
-        if (Input.GetKeyUp(KeyCode.U))
-        {
-            DispatchShader(texResolution / 8, texResolution / 8);
-        }
-    }
 }
-

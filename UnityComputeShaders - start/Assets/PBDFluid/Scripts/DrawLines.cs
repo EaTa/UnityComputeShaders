@@ -1,21 +1,24 @@
-using UnityEngine;
-using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace PBDFluid
 {
-
-    public enum LINE_MODE { LINES, TRIANGLES, TETRAHEDRON  };
+    public enum LINE_MODE
+    {
+        LINES,
+        TRIANGLES,
+        TETRAHEDRON
+    }
 
     public class DrawLines
     {
-
         public static LINE_MODE LineMode = LINE_MODE.LINES;
 
-        private static List<Vector4> m_vertices = new List<Vector4>();
+        static readonly List<Vector4> m_vertices = new List<Vector4>();
 
-        private static Material m_lineMaterial;
-        private static Material LineMaterial
+        static Material m_lineMaterial;
+
+        static Material LineMaterial
         {
             get
             {
@@ -25,25 +28,27 @@ namespace PBDFluid
             }
         }
 
-        public static void Draw(Camera camera, IList<Vector4> vertices, Color color, Matrix4x4 localToWorld, IList<int> indices = null)
+        public static void Draw(Camera camera, IList<Vector4> vertices, Color color, Matrix4x4 localToWorld,
+            IList<int> indices = null)
         {
             if (camera == null || vertices == null) return;
             m_vertices.Clear();
 
-            int count = vertices.Count;
-            for (int i = 0; i < count; i++)
+            var count = vertices.Count;
+            for (var i = 0; i < count; i++)
                 m_vertices.Add(vertices[i]);
 
             DrawVertices(camera, m_vertices, color, localToWorld, indices);
         }
 
-        public static void Draw(Camera camera, IList<Vector3> vertices, Color color, Matrix4x4 localToWorld, IList<int> indices = null)
+        public static void Draw(Camera camera, IList<Vector3> vertices, Color color, Matrix4x4 localToWorld,
+            IList<int> indices = null)
         {
             if (camera == null || vertices == null) return;
             m_vertices.Clear();
 
-            int count = vertices.Count;
-            for (int i = 0; i < count; i++)
+            var count = vertices.Count;
+            for (var i = 0; i < count; i++)
                 m_vertices.Add(vertices[i]);
 
             DrawVertices(camera, m_vertices, color, localToWorld, indices);
@@ -60,18 +65,20 @@ namespace PBDFluid
             DrawVertices(camera, m_vertices, color, localToWorld, null);
         }
 
-        public static void Draw(Camera camera, IList<Vector2> vertices, Color color, Matrix4x4 localToWorld, IList<int> indices = null)
+        public static void Draw(Camera camera, IList<Vector2> vertices, Color color, Matrix4x4 localToWorld,
+            IList<int> indices = null)
         {
             if (camera == null || vertices == null) return;
 
-            int count = vertices.Count;
-            for (int i = 0; i < count; i++)
+            var count = vertices.Count;
+            for (var i = 0; i < count; i++)
                 m_vertices.Add(vertices[i]);
 
             DrawVertices(camera, m_vertices, color, localToWorld, indices);
         }
 
-        private static void DrawVertices(Camera camera, IList<Vector4> vertices, Color color, Matrix4x4 localToWorld, IList<int> indices)
+        static void DrawVertices(Camera camera, IList<Vector4> vertices, Color color, Matrix4x4 localToWorld,
+            IList<int> indices)
         {
             switch (LineMode)
             {
@@ -89,7 +96,8 @@ namespace PBDFluid
             }
         }
 
-        private static void DrawVerticesAsLines(Camera camera, Color color, IList<Vector4> vertices, Matrix4x4 localToWorld, IList<int> indices)
+        static void DrawVerticesAsLines(Camera camera, Color color, IList<Vector4> vertices, Matrix4x4 localToWorld,
+            IList<int> indices)
         {
             if (camera == null || vertices == null) return;
             if (vertices.Count < 2) return;
@@ -104,14 +112,13 @@ namespace PBDFluid
             GL.Begin(GL.LINES);
             GL.Color(color);
 
-            int vertexCount = vertices.Count;
+            var vertexCount = vertices.Count;
 
-            if(indices != null)
-            {
-                for (int i = 0; i < indices.Count / 2; i++)
+            if (indices != null)
+                for (var i = 0; i < indices.Count / 2; i++)
                 {
-                    int i0 = indices[i * 2 + 0];
-                    int i1 = indices[i * 2 + 1];
+                    var i0 = indices[i * 2 + 0];
+                    var i1 = indices[i * 2 + 1];
 
                     if (i0 < 0 || i0 >= vertexCount) continue;
                     if (i1 < 0 || i1 >= vertexCount) continue;
@@ -119,22 +126,20 @@ namespace PBDFluid
                     GL.Vertex(vertices[i0]);
                     GL.Vertex(vertices[i1]);
                 }
-            }
             else
-            {
-                for (int i = 0; i < vertexCount-1; i++)
+                for (var i = 0; i < vertexCount - 1; i++)
                 {
-                    GL.Vertex(vertices[i ]);
+                    GL.Vertex(vertices[i]);
                     GL.Vertex(vertices[i + 1]);
                 }
-            }
 
             GL.End();
 
             GL.PopMatrix();
         }
 
-        private static void DrawVerticesAsTriangles(Camera camera, Color color, IList<Vector4> vertices, Matrix4x4 localToWorld, IList<int> indices)
+        static void DrawVerticesAsTriangles(Camera camera, Color color, IList<Vector4> vertices, Matrix4x4 localToWorld,
+            IList<int> indices)
         {
             if (camera == null || vertices == null) return;
             if (vertices.Count < 3) return;
@@ -149,15 +154,14 @@ namespace PBDFluid
             GL.Begin(GL.LINES);
             GL.Color(color);
 
-            int vertexCount = vertices.Count;
+            var vertexCount = vertices.Count;
 
-            if(indices != null)
-            {
-                for (int i = 0; i < indices.Count / 3; i++)
+            if (indices != null)
+                for (var i = 0; i < indices.Count / 3; i++)
                 {
-                    int i0 = indices[i * 3 + 0];
-                    int i1 = indices[i * 3 + 1];
-                    int i2 = indices[i * 3 + 2];
+                    var i0 = indices[i * 3 + 0];
+                    var i1 = indices[i * 3 + 1];
+                    var i2 = indices[i * 3 + 2];
 
                     if (i0 < 0 || i0 >= vertexCount) continue;
                     if (i1 < 0 || i1 >= vertexCount) continue;
@@ -172,10 +176,8 @@ namespace PBDFluid
                     GL.Vertex(vertices[i2]);
                     GL.Vertex(vertices[i1]);
                 }
-            }
             else
-            {
-                for (int i = 0; i < vertexCount / 3; i++)
+                for (var i = 0; i < vertexCount / 3; i++)
                 {
                     Vector3 v0 = vertices[i * 3 + 0];
                     Vector3 v1 = vertices[i * 3 + 1];
@@ -190,14 +192,14 @@ namespace PBDFluid
                     GL.Vertex(v2);
                     GL.Vertex(v1);
                 }
-            }
 
             GL.End();
 
             GL.PopMatrix();
         }
 
-        private static void DrawVerticesAsTetrahedron(Camera camera, Color color, IList<Vector4> vertices, Matrix4x4 localToWorld, IList<int> indices)
+        static void DrawVerticesAsTetrahedron(Camera camera, Color color, IList<Vector4> vertices,
+            Matrix4x4 localToWorld, IList<int> indices)
         {
             if (camera == null || vertices == null) return;
             if (vertices.Count < 4) return;
@@ -212,16 +214,15 @@ namespace PBDFluid
             GL.Begin(GL.LINES);
             GL.Color(color);
 
-            int vertexCount = vertices.Count;
+            var vertexCount = vertices.Count;
 
-            if(indices != null)
-            {
-                for (int i = 0; i < indices.Count / 4; i++)
+            if (indices != null)
+                for (var i = 0; i < indices.Count / 4; i++)
                 {
-                    int i0 = indices[i * 4 + 0];
-                    int i1 = indices[i * 4 + 1];
-                    int i2 = indices[i * 4 + 2];
-                    int i3 = indices[i * 4 + 3];
+                    var i0 = indices[i * 4 + 0];
+                    var i1 = indices[i * 4 + 1];
+                    var i2 = indices[i * 4 + 2];
+                    var i3 = indices[i * 4 + 3];
 
                     if (i0 < 0 || i0 >= vertexCount) continue;
                     if (i1 < 0 || i1 >= vertexCount) continue;
@@ -246,10 +247,8 @@ namespace PBDFluid
                     GL.Vertex(vertices[i1]);
                     GL.Vertex(vertices[i3]);
                 }
-            }
             else
-            {
-                for (int i = 0; i < vertexCount / 4; i++)
+                for (var i = 0; i < vertexCount / 4; i++)
                 {
                     Vector3 v0 = vertices[i * 4 + 0];
                     Vector3 v1 = vertices[i * 4 + 1];
@@ -275,13 +274,10 @@ namespace PBDFluid
                     GL.Vertex(v1);
                     GL.Vertex(v3);
                 }
-            }
 
             GL.End();
 
             GL.PopMatrix();
         }
-
     }
-
 }

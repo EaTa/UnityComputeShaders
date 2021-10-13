@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class OrbitingStars : MonoBehaviour
 {
@@ -8,13 +6,13 @@ public class OrbitingStars : MonoBehaviour
     public ComputeShader shader;
 
     public GameObject prefab;
+    int groupSizeX;
 
     int kernelHandle;
-    uint threadGroupSizeX;
-    int groupSizeX;
-    
+
     Transform[] stars;
-    
+    uint threadGroupSizeX;
+
     void Start()
     {
         kernelHandle = shader.FindKernel("OrbitingStars");
@@ -22,14 +20,10 @@ public class OrbitingStars : MonoBehaviour
         groupSizeX = (int)((starCount + threadGroupSizeX - 1) / threadGroupSizeX);
 
         stars = new Transform[starCount];
-        for (int i = 0; i < starCount; i++)
-        {
-            stars[i] = Instantiate(prefab, transform).transform;
-        }
+        for (var i = 0; i < starCount; i++) stars[i] = Instantiate(prefab, transform).transform;
     }
 
     void Update()
     {
-        
     }
 }

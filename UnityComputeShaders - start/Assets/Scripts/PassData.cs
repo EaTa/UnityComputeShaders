@@ -1,19 +1,17 @@
 ﻿using UnityEngine;
-using System.Collections;
 
 public class PassData : MonoBehaviour
 {
-
     public ComputeShader shader;
     public int texResolution = 1024;
 
-    Renderer rend;
-    RenderTexture outputTexture;
+    public Color clearColor;
+    public Color circleColor;
 
     int circlesHandle;
+    RenderTexture outputTexture;
 
-    public Color clearColor = new Color();
-    public Color circleColor = new Color();
+    Renderer rend;
 
     // Use this for initialization
     void Start()
@@ -28,24 +26,23 @@ public class PassData : MonoBehaviour
         InitShader();
     }
 
-    private void InitShader()
-    {
-        circlesHandle = shader.FindKernel("Circles");
-
-        shader.SetInt( "texResolution", texResolution);
-        shader.SetTexture( circlesHandle, "Result", outputTexture);
-
-        rend.material.SetTexture("_MainTex", outputTexture);
-    }
- 
-    private void DispatchKernel(int count)
-    {
-        shader.Dispatch(circlesHandle, count, 1, 1);
-    }
-
     void Update()
     {
         DispatchKernel(1);
     }
-}
 
+    void InitShader()
+    {
+        circlesHandle = shader.FindKernel("Circles");
+
+        shader.SetInt("texResolution", texResolution);
+        shader.SetTexture(circlesHandle, "Result", outputTexture);
+
+        rend.material.SetTexture("_MainTex", outputTexture);
+    }
+
+    void DispatchKernel(int count)
+    {
+        shader.Dispatch(circlesHandle, count, 1, 1);
+    }
+}

@@ -47,14 +47,12 @@ RWTexture2D<float2> X2_out;
 [numthreads(8, 8, 1)]
 void Advect(uint2 tid : SV_DispatchThreadID)
 {
-    
 }
 
 // Add-force step  
 [numthreads(8, 8, 1)]
 void Force(uint2 tid : SV_DispatchThreadID)
 {
-    
 }
 
 // Setup for Project step (divW calculation)
@@ -65,7 +63,7 @@ void ProjectSetup(uint2 tid : SV_DispatchThreadID)
     W_in.GetDimensions(dim.x, dim.y);
 
     DivW_out[tid] = (W_in[tid + int2(1, 0)].x - W_in[tid - int2(1, 0)].x +
-                     W_in[tid + int2(0, 1)].y - W_in[tid - int2(0, 1)].y) * dim.y / 2;
+        W_in[tid + int2(0, 1)].y - W_in[tid - int2(0, 1)].y) * dim.y / 2;
 
     P_out[tid] = 0;
 }
@@ -83,12 +81,10 @@ void Project(uint2 tid : SV_DispatchThreadID)
 [numthreads(8, 8, 1)]
 void Diffuse1(uint2 tid : SV_DispatchThreadID)
 {
-    
 }
 
 // Jacobi method with a vector field
 [numthreads(8, 8, 1)]
 void Diffuse2(uint2 tid : SV_DispatchThreadID)
 {
-    
 }

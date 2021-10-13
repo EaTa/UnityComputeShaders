@@ -16,5 +16,4 @@ void CSMain(uint3 id : SV_DispatchThreadID)
     float4 color = srcColor;
 
     output[id.xy] = color;
-
 }

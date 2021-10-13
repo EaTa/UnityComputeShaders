@@ -1,5 +1,5 @@
 ﻿// Each #kernel tells which function to compile; you can have many kernels
-#define THREADGROUPSIZE 128 
+#define THREADGROUPSIZE 128
 #pragma kernel UpdateGrass
 
 struct GrassClump
@@ -10,6 +10,7 @@ struct GrassClump
     float4 quaternion;
     float noise;
 };
+
 RWStructuredBuffer<GrassClump> clumpsBuffer;
 float time;
 float maxLean;
@@ -17,10 +18,11 @@ float speed;
 float4 tramplePos;
 float trampleRadius;
 
-float4 MapVector(float3 v1, float3 v2){
+float4 MapVector(float3 v1, float3 v2)
+{
     v1 = normalize(v1);
     v2 = normalize(v2);
-    float3 v = v1+v2;
+    float3 v = v1 + v2;
     v = normalize(v);
     float4 q = 0;
     q.w = dot(v, v2);
@@ -29,13 +31,13 @@ float4 MapVector(float3 v1, float3 v2){
 }
 
 [numthreads(THREADGROUPSIZE,1,1)]
-void UpdateGrass (uint3 id : SV_DispatchThreadID)
+void UpdateGrass(uint3 id : SV_DispatchThreadID)
 {
     GrassClump clump = clumpsBuffer[id.x];
 
     //TO DO: set trample and the quaternion for the clump
 
-    clump.lean = sin(time*speed) * maxLean * clump.noise;
+    clump.lean = sin(time * speed) * maxLean * clump.noise;
 
     clumpsBuffer[id.x] = clump;
 }
