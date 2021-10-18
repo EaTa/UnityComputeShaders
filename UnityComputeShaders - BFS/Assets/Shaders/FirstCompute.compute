@@ -1,14 +1,19 @@
 // Each #kernel tells which function to compile; you can have many kernels
+// Kernels are called via Dispatch() in a Monobehavior script.
 #pragma kernel CSMain
 
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
 RWTexture2D<float4> Result;
 
+
 [numthreads(8,8,1)]
+// CSMain() has a single unit 3-component vector 'id'
+//'id' is assigned the SV_DispatchThreadID semantic
+// The semantic informs the compiler how the parameter is to be used.
+// Semantics are used when data are passed between different stages of the render pipeline.
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
-    // TODO: insert actual code here!
-
-    Result[id.xy] = float4(id.x & id.y, (id.x & 15)/15.0, (id.y & 15)/15.0, 0.0);
+    // Result[id.xy] = float4(id.x & id.y, (id.x & 15)/15.0, (id.y & 15)/15.0, 0.0);
+    Result[id.xy] = float4(1.0, 0.0, 0.0, 0.0);
 }

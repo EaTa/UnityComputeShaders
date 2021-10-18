@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Assertions;
 
-public class BFS_AssignTexture : MonoBehaviour
+public class AssignTexture : MonoBehaviour
 {
     public ComputeShader UserShader;
     public int TexResolution = 256;
@@ -45,7 +45,7 @@ public class BFS_AssignTexture : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetKeyUp(KeyCode.U))
+        if (Input.GetKeyUp(KeyCode.F))
         {
             DispatchShader(TexResolution / 8, TexResolution / 8);
         }
