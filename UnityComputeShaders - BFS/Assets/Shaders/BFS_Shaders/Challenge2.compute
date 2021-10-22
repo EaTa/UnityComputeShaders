@@ -1,0 +1,56 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+#define PI2 6.28318530718
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWTexture2D<float4> Result;
+int texResolution;
+
+float4 fillColor;
+float4 clearColor;
+int sides;
+float time;
+float speed;
+float edge;
+float radius;
+
+#include "../noiseSimplex.cginc"
+
+float polygon(float2 pt, const float2 center, const float radius, const int sides, const float rotate, const float edge_thickness)
+{
+    pt -= center;
+
+    //Angle and radius from the current pixel /
+    const float theta = atan2(pt.y, pt.x) + rotate;
+    const float rad = PI2 / float(sides);
+
+    // Shaping function that modulate the distance
+    const float d = cos(floor(0.5 + theta / rad) * rad - theta) * length(pt);
+
+    return 1.0 - smoothstep(radius, radius + edge_thickness, d);
+}
+
+[numthreads(8,8,1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    //1. Change the coordinate space of id.xy from (0,0)-(texResolution,texResolution) to (-0.5, -0.5)-(0.5,0.5)
+    const float3 pt = (float3)id / (float)texResolution - float3(0.5, 0.5, 0.0);
+
+    //2. Set the center to (0,0) and radius to 0.15
+    const float2 center = float2(0.0, 0.0);
+
+    //3. Call polygon using the pt you calculated at step 1, the center and radius from step 2.
+    //   sides and time are passed from the C# script
+    const float inPolygon = polygon(pt.xy, center, radius, sides, PI2 * time * speed, edge);
+
+    //4. Set noise. Use the snoise function and pt * 100
+    const float n = snoise(pt * 100);
+
+    //5. Use the HLSL function lerp to blend between clearColor and fillColor*noise using the return
+    //   value from step 3
+    const float4 color = lerp(clearColor, fillColor, inPolygon * n);
+
+    Result[id.xy] = color;
+}

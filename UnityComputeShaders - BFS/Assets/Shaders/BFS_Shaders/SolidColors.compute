@@ -1,0 +1,107 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel SolidRed
+#pragma kernel SolidYellow
+#pragma kernel SplitScreen
+#pragma kernel Circle
+#pragma kernel Rectangle
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWTexture2D<float4> Result;
+int texResolution;
+
+[numthreads(8,8,1)]
+void SolidRed(uint3 id : SV_DispatchThreadID)
+{
+    Result[id.xy] = float4(1.0, 0.0, 0.0, 1.0);
+}
+
+[numthreads(8,8,1)]
+void SolidYellow(uint3 id : SV_DispatchThreadID)
+{
+    Result[id.xy] = float4(1.0, 1.0, 0.0, 1.0);
+}
+
+[numthreads(8,8,1)]
+void SplitScreen(uint3 id : SV_DispatchThreadID)
+{
+    // Divide texResolution by 2
+    const uint halfRes = (uint)texResolution >> 1;
+    // const uint halfRes = (uint)texResolution / (uint)2;
+
+    // Calculate quadrant colors.
+    if (id.x > halfRes)
+    {
+        if (id.y > halfRes)
+        {
+            // Upper right quadrant is red
+            Result[id.xy] = float4(1.0, 0.0, 0.0, 1.0);
+        }
+        else
+        {
+            // Lower right quadrant is yellow
+            Result[id.xy] = float4(1.0, 1.0, 0.0, 1.0);
+        }
+    }
+    else
+    {
+        if (id.y > halfRes)
+        {
+            // Upper left quadrant is green
+            Result[id.xy] = float4(0.0, 1.0, 0.0, 1.0);
+        }
+        else
+        {
+            // Lower left quadrant is blue
+            Result[id.xy] = float4(0.0, 0.0, 1.0, 1.0);
+        }
+    }
+
+    // Using step(): LL == black, LR == red, UL == green, UR == yellow
+    // Result[id.xy] = float4(step(halfRes, id.x), step(halfRes, id.y), 0.0, 1.0);
+}
+
+// Return one if a point, 'pt', is inside a circle of radius 'radius', and zero otherwise.
+float InCircle(const float2 pt, const float radius)
+{
+    // Return one if p is inside a circle of radius 'radius', zero otherwise.
+    return length(pt) < radius ? 1.0 : 0.0;
+}
+
+float InSquare(const float2 pt, const float sideLen)
+{
+    float2 halfSize = sideLen / 2.0;
+
+    const float inRectX = step(-halfSize.x, pt.x) - step(halfSize.x, pt.x);
+    const float inRectY= step(-halfSize.y, pt.y) - step(halfSize.y , pt.y);
+
+    return inRectX * inRectY;
+
+}
+
+[numthreads(8,8,1)]
+void Circle(uint3 id : SV_DispatchThreadID)
+{
+    // Divide texResolution by 2
+    // ReSharper disable once CppLocalVariableMayBeConst
+    int halfRes = (uint)texResolution >> 1;
+
+    // Determine if pixel is inside a circle of radius.
+    const float radius = (float)(texResolution >> 2);
+    float inCircle = InCircle((float2)((int2)id.xy - halfRes), radius);
+
+    Result[id.xy] = float4(inCircle, inCircle, 0.0, 1.0);
+}
+
+[numthreads(8,8,1)]
+void Rectangle(uint3 id : SV_DispatchThreadID)
+{
+    // Divide texResolution by 2
+    // ReSharper disable once CppLocalVariableMayBeConst
+    int halfRes = (uint)texResolution >> 1;
+
+    const float sideLen = (float)(texResolution >> 2);
+    float inSquare = InSquare((float2)((int2)id.xy - halfRes), sideLen);
+
+    Result[id.xy] = float4(inSquare, 0.0, inSquare, 1.0);
+}

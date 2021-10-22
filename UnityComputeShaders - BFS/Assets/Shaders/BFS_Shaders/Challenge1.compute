@@ -1,0 +1,37 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel Rectangle
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWTexture2D<float4> Result;
+
+// Texture resolution.
+int TexResolution;
+
+// Create a float4 to hold the rectangle that defines the square
+float4 RectangleDef;
+
+//Return 1 if pt is in the rect parameter and 0 otherwise
+float InRect(float2 pt, float4 rect)
+{
+    float2 halfWidth = rect.z / 2.0;
+    float2 halfHeight = rect.w / 2.0;
+
+    const float inRectX = step(-halfWidth.x, pt.x) - step(halfWidth.x, pt.x);
+    const float inRectY= step(-halfHeight.y, pt.y) - step(halfHeight.y , pt.y);
+
+    return inRectX * inRectY;
+}
+
+[numthreads(8,8,1)]
+void Rectangle(uint3 id : SV_DispatchThreadID)
+{
+    // Divide texResolution by 2
+    // ReSharper disable once CppLocalVariableMayBeConst
+    int halfRes = (uint)TexResolution >> 1;
+
+    float inRect = InRect((float2)((int2)id.xy - int2(RectangleDef.x, RectangleDef.y)), RectangleDef);
+
+    Result[id.xy] = float4(inRect, 0.0, inRect, 1.0);
+
+}
